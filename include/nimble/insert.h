@@ -1,5 +1,5 @@
-#ifndef INCLUDE_CVIM_INSERT_H_
-#define INCLUDE_CVIM_INSERT_H_
+#ifndef INCLUDE_NIMBLE_INSERT_H_
+#define INCLUDE_NIMBLE_INSERT_H_
 
 #include "nimble/editor.h"
 
@@ -10,4 +10,4 @@ typedef struct {
 
 Insert* create_insert_mode(Editor* parent);
 
-#endif  // INCLUDE_CVIM_INSERT_H_
+#endif  // INCLUDE_NIMBLE_INSERT_H_

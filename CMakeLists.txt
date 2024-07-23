@@ -13,10 +13,10 @@ find_package(raylib ${RAYLIB_VERSION} QUIET)
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib
     include(FetchContent)
     FetchContent_Declare(
-    raylib
-    DOWNLOAD_EXTRACT_TIMESTAMP OFF
-    URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
-  )
+        raylib
+        DOWNLOAD_EXTRACT_TIMESTAMP OFF
+        URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
+    )
     FetchContent_GetProperties(raylib)
     if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
         set(FETCHCONTENT_QUIET NO)
@@ -29,9 +29,22 @@ endif()
 add_subdirectory(lib/lsp)
 add_executable(${PROJECT_NAME} main.c)
 
-target_sources(${PROJECT_NAME} PRIVATE src/text.c src/normal.c src/editor.c src/insert.c src/text_nav.c src/buffer.c)
+target_sources(${PROJECT_NAME} PRIVATE
+    src/text.c
+    src/normal.c
+    src/editor.c
+    src/insert.c
+    src/buffer.c
+    src/settings.c
+    src/motions.c
+)
+
 target_include_directories(${PROJECT_NAME} PUBLIC include lib)
 target_link_libraries(${PROJECT_NAME} raylib lsp)
+
+if (${BUILD_UNIT_TESTS})
+    add_subdirectory(tests)
+endif()
 
 # Web Configurations
 if (${PLATFORM} STREQUAL "Web")

@@ -1,7 +1,7 @@
-#ifndef INCLUDE_CVIM_EDITOR_H_
-#define INCLUDE_CVIM_EDITOR_H_
+#ifndef INCLUDE_NIMBLE_EDITOR_H_
+#define INCLUDE_NIMBLE_EDITOR_H_
 
-#include "nimble/text.h"
+typedef struct Buffer Buffer;
 
 typedef enum {
     MODE_NORMAL,
@@ -13,20 +13,31 @@ typedef enum {
 typedef struct {
     void (*on_enter)(void* mode);
     void (*on_exit)(void* mode);
-    void (*update)(void* vtable, Text* text);
+    void (*update)(void* vtable, Buffer* buffer);
 } ModeVTable;
 
 typedef struct {
     Mode mode;
     ModeVTable* mode_vtable[MODE_MAX];
+    Buffer** buffers;
+    int buffer_length;
+    int buffer_index;
 } Editor;
 
 int editor_open_file(Editor* editor, const char* relative_path);
 
 void editor_change_mode(Editor* editor, Mode mode);
 
-void editor_update(Editor* editor, Text* text);
+void editor_update(Editor* editor);
+
+void editor_scroll(Editor* editor, int x, int y);
+
+void editor_draw_text_cursor(const Editor* editor);
+
+void editor_draw_text(const Editor* editor);
+
+void editor_draw_status_bar(const Editor* editor);
 
 Editor* editor_create(void);
 
-#endif  // INCLUDE_CVIM_EDITOR_H_
+#endif  // INCLUDE_NIMBLE_EDITOR_H_

@@ -1,13 +1,24 @@
 #include "nimble/editor.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
 #include <unistd.h>
 
+#include "lsp/lsp.h"
+#include "nimble/buffer.h"
 #include "nimble/insert.h"
 #include "nimble/normal.h"
+#include "nimble/text.h"
+
+static const char* const MODE_NAME[] = {
+    [MODE_NORMAL] = "NORMAL",
+    [MODE_INSERT] = "INSERT",
+    [MODE_VISUAL] = "VISUAL",
+};
 
 void editor_change_mode(Editor* editor, Mode mode) {
     ModeVTable* old = editor->mode_vtable[editor->mode];
@@ -20,30 +31,92 @@ void editor_change_mode(Editor* editor, Mode mode) {
     new->on_enter(new);
 }
 
-void editor_update(Editor* editor, Text* text) {
+void editor_update(Editor* editor) {
     ModeVTable* vtable = editor->mode_vtable[editor->mode];
     assert(vtable != NULL);
-    vtable->update(vtable, text);
+    vtable->update(vtable, editor->buffers[editor->buffer_index]);
+}
+
+void editor_scroll(Editor* editor, int x, int y) {
+    assert(editor != NULL);
+    assert(editor->buffers != NULL);
+    assert(editor->buffer_length > 0);
+    Buffer* buffer = editor->buffers[editor->buffer_index];
+    assert(buffer != NULL);
+
+    buffer->text_scrollY = fmin(0, buffer->text_scrollY + y);
+}
+
+void editor_draw_status_bar(const Editor* editor) {
+    int width            = GetScreenWidth();
+    int height           = GetScreenHeight();
+    const Buffer* buffer = editor->buffers[editor->buffer_index];
+
+    Rectangle rect   = {.x = 0, .y = height - 16, .width = width, .height = 16};
+    float spacing    = (float)buffer->text->font.baseSize / 10;
+    Vector2 position = {.x = 12, .y = height - 20};
+
+    char status[32];
+    int line      = text_line_index(buffer->text, buffer->text_index);
+    int character = text_character_index(buffer->text, buffer->text_index);
+    snprintf(status, sizeof(status), "%d:%d", line, character);
+
+    const char* mode = MODE_NAME[editor->mode];
+    DrawRectangle(0, height - 24, width, 24, DARKBROWN);
+    DrawTextEx(buffer->text->font, mode, position, 16, spacing, WHITE);
+
+    Vector2 size = MeasureTextEx(buffer->text->font, status, 16, spacing);
+
+    position.x   = width - size.x - 16;
+    DrawTextEx(buffer->text->font, status, position, 16, spacing, WHITE);
+}
+
+void editor_draw_text_cursor(const Editor* editor) {
+    Buffer* buffer = editor->buffers[editor->buffer_index];
+    Vector2 c_pos  = text_cursor_pos(buffer->text, buffer->text_index);
+    Vector2 c_size = text_cursor_size(buffer->text, buffer->text_index);
+    int scrollY    = buffer->text_scrollY;
+    DrawRectangle(c_pos.x, c_pos.y + scrollY, c_size.x, c_size.y, BLUE);
+}
+
+void editor_draw_text(const Editor* editor) {
+    const Buffer* buffer = editor->buffers[editor->buffer_index];
+    text_draw(buffer->text, 0, buffer->text_scrollY);
 }
 
 int editor_open_file(Editor* editor, const char* relative_path) {
+    assert(editor != NULL);
+    assert(relative_path != NULL);
+
     char dir[MAXPATHLEN];
     char path[MAXPATHLEN];
 
-    getcwd(dir, MAXPATHLEN);
+    getcwd(dir, sizeof(dir));
     snprintf(path, sizeof(path), "%s/%s", dir, relative_path);
 
-    // TODO: better error handling
     FILE* file = fopen(path, "r");
+    if (file == NULL) return -ENOENT;
+
     fseek(file, 0, SEEK_END);
     int length = ftell(file);
     rewind(file);
 
     char* content = malloc(length + 1);
+    if (content == NULL) return -ENOMEM;
     fread(content, length, 1, file);
-
+    content[length] = '\0';
     fclose(file);
 
+    Buffer* buffer = buffer_new(relative_path, content);
+    if (buffer != NULL) {
+        editor->buffer_length++;
+        int length      = sizeof(Buffer*) * editor->buffer_length;
+        editor->buffers = realloc(editor->buffers, length);
+        editor->buffers[editor->buffer_length - 1] = buffer;
+    }
+
+    lsp_open(path, content);
+    free(content);
     return 0;
 }
 

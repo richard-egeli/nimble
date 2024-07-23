@@ -1,0 +1,6 @@
+#ifndef INCLUDE_NIMBLE_APPLICATION_H_
+#define INCLUDE_NIMBLE_APPLICATION_H_
+
+void application_run(void);
+
+#endif  // INCLUDE_NIMBLE_APPLICATION_H_

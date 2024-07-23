@@ -1,11 +1,27 @@
-#ifndef INCLUDE_CVIM_BUFFER_H_
-#define INCLUDE_CVIM_BUFFER_H_
+#ifndef INCLUDE_NIMBLE_BUFFER_H_
+#define INCLUDE_NIMBLE_BUFFER_H_
 
-#include "nimble/text.h"
+typedef struct Text Text;
 
-typedef struct {
+typedef struct Buffer {
+    const char* filepath;
     Text* text;
-    const char* filename;
+    int text_index;
+    int text_scrollY;
 } Buffer;
 
-#endif  // INCLUDE_CVIM_BUFFER_H_
+void buffer_push(Buffer* buffer, char c);
+
+void buffer_pop(Buffer* buffer);
+
+void buffer_move_up(Buffer* buffer);
+
+void buffer_move_down(Buffer* buffer);
+
+void buffer_move_left(Buffer* buffer);
+
+void buffer_move_right(Buffer* buffer);
+
+Buffer* buffer_new(const char* filename, const char* content);
+
+#endif  // INCLUDE_NIMBLE_BUFFER_H_

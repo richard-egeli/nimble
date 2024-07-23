@@ -1,5 +1,5 @@
-#ifndef INCLUDE_CVIM_NORMAL_H_
-#define INCLUDE_CVIM_NORMAL_H_
+#ifndef INCLUDE_NIMBLE_NORMAL_H_
+#define INCLUDE_NIMBLE_NORMAL_H_
 
 #include "nimble/editor.h"
 
@@ -10,4 +10,4 @@ typedef struct {
 
 Normal* create_normal_mode(Editor* parent);
 
-#endif  // INCLUDE_CVIM_NORMAL_H_
+#endif  // INCLUDE_NIMBLE_NORMAL_H_
