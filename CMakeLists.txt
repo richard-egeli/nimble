@@ -6,7 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED YES)
 set(CMAKE_C_EXTENSIONS NO)
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(RAYLIB_VERSION 5.0)
 find_package(raylib ${RAYLIB_VERSION} QUIET)
@@ -37,6 +37,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/buffer.c
     src/settings.c
     src/motions.c
+    src/finder.c
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include lib)

@@ -24,6 +24,8 @@ typedef struct {
     int buffer_index;
 } Editor;
 
+char* editor_file_search(Editor* editor, const char* filter);
+
 int editor_open_file(Editor* editor, const char* relative_path);
 
 void editor_change_mode(Editor* editor, Mode mode);

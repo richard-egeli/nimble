@@ -20,6 +20,44 @@ static const char* const MODE_NAME[] = {
     [MODE_VISUAL] = "VISUAL",
 };
 
+char* editor_file_search(Editor* editor, const char* filter) {
+    FILE* fp;
+    char cmd[MAXPATHLEN];
+    snprintf(cmd, sizeof(cmd), "fd | fzf --filter='%s'", filter);
+
+    fp = popen(cmd, "r");
+    assert(fp != NULL);
+
+    size_t read     = 0;
+    size_t size     = 0;
+    size_t capacity = 1024;
+    char* content   = malloc(capacity);
+
+    while ((read = fread(content + size, 1, capacity - size, fp)) > 0) {
+        size += read;
+        if (size >= capacity) {
+            capacity *= 2;
+            content = realloc(content, capacity);
+            if (!content) {
+                free(content);
+                pclose(fp);
+                return NULL;
+            }
+        }
+    }
+
+    if (size == 0) {
+        free(content);
+        content = NULL;
+        pclose(fp);
+        return NULL;
+    }
+
+    content[size] = '\0';
+    pclose(fp);
+    return content;
+}
+
 void editor_change_mode(Editor* editor, Mode mode) {
     ModeVTable* old = editor->mode_vtable[editor->mode];
     ModeVTable* new = editor->mode_vtable[mode];
@@ -32,8 +70,13 @@ void editor_change_mode(Editor* editor, Mode mode) {
 }
 
 void editor_update(Editor* editor) {
+    assert(editor != NULL);
+    assert(editor->buffers != NULL);
+    assert(editor->buffers[editor->buffer_index] != NULL);
+
     ModeVTable* vtable = editor->mode_vtable[editor->mode];
     assert(vtable != NULL);
+    assert(vtable->update != NULL);
     vtable->update(vtable, editor->buffers[editor->buffer_index]);
 }
 

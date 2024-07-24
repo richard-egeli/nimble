@@ -1,7 +1,9 @@
 #include "nimble/buffer.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,12 +35,13 @@ void buffer_move_up(Buffer* buffer) {
         char* p_start = &text->buffer[index];
         int c_len     = c_end - c_start;
         int p_len     = p_end - p_start;
-        int c_off     = c_start - text->buffer;
-        int p_off     = p_start - text->buffer;
-        int i_off     = buffer->text_index - c_off;
+        int c_off     = c_start - text->buffer;      // current line offset
+        int p_off     = p_start - text->buffer;      // previous line offset
+        int i_off     = buffer->text_index - c_off;  // char index line offset
+        int p_max     = fmax(p_off, p_off + p_len - 1);
 
         assert(buffer->text_index >= c_off);
-        buffer->text_index = fmin(p_off + i_off, p_off + p_len);
+        buffer->text_index = fmin(p_off + i_off, p_max);
         assert(buffer->text_index <= text->length);
     }
 }
@@ -55,13 +58,20 @@ void buffer_move_down(Buffer* buffer) {
         char* n_end   = &text->buffer[index];
         int c_len     = c_end - c_start;
         int n_len     = n_end - n_start;
-        int c_off     = c_start - text->buffer;
-        int n_off     = n_start - text->buffer;
-        int i_off     = buffer->text_index - c_off;
+        int c_off     = c_start - text->buffer;      // current line offset
+        int n_off     = n_start - text->buffer;      // next line offset
+        int i_off     = buffer->text_index - c_off;  // char index line offset
+        int n_min     = fmax(n_off, n_off + n_len - 1);
 
         assert(buffer->text_index >= c_off);
-        buffer->text_index = fmin(n_off + i_off, n_off + n_len);
+        buffer->text_index = fmin(n_off + i_off, n_min);
         assert(buffer->text_index <= text->length);
+
+        char c = buffer->text->buffer[buffer->text_index];
+        while (isspace(c) && c != '\n') {
+            buffer->text_index++;
+            c = buffer->text->buffer[buffer->text_index];
+        }
     }
 }
 

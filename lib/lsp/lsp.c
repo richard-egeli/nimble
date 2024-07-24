@@ -37,7 +37,7 @@ static char* lsp_recv(FILE* pipe) {
             fgetc(pipe);
             fread(buffer, length, 1, pipe);
             buffer[length] = '\0';
-            printf("%s\n", buffer);
+            // printf("%s\n", buffer);
         }
 
         fpurge(pipe);
@@ -70,7 +70,6 @@ void lsp_open(const char* path, const char* content) {
     const char* json = yyjson_mut_write(doc, 0, &length);
     if (json) {
         lsp_send(input_pipe, json, length);
-        printf("%s\n", json);
         free((void*)json);
     }
 

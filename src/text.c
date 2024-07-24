@@ -160,7 +160,7 @@ void text_draw(const Text* text, int scrollX, int scrollY) {
             if (codepoint != ' ' && codepoint != '\t') {
                 float size  = text->font_size;
                 Vector2 pos = {textOffsetX + scrollX, textOffsetY + scrollY};
-                DrawTextCodepoint(font, codepoint, pos, size, WHITE);
+                DrawTextCodepoint(text->font, codepoint, pos, size, WHITE);
             }
 
             textOffsetX += code_size(codepoint, font, scaleFactor, spacing);
