@@ -5,9 +5,25 @@
 
 #include "raylib.h"
 
-typedef struct Text {
+// End Of Line
+#define EOL(line) ((TextPos){line, 0x7FFFFFFF})
+
+typedef struct TextPos {
+    int line;
+    int offset;
+} TextPos;
+
+typedef struct TextLine TextLine;
+
+typedef struct TextLine {
     char* buffer;
+    int capacity;
     int length;
+} TextLine;
+
+typedef struct Text {
+    TextLine* lines;
+    int line_count;
     Font font;
     float font_size;
     int line_spacing;
@@ -15,27 +31,23 @@ typedef struct Text {
 
 bool text_valid(const Text* text);
 
-int text_line_index(const Text* text, int index);
+Rectangle text_cursor_get(const Text* text, TextPos pos);
 
-int text_character_index(const Text* text, int index);
+void text_line_pop(Text* text, TextPos pos);
 
-int text_next_word(const Text* text, int index);
+void text_line_push(Text* text, TextPos pos);
 
-int text_previous_word(const Text* text, int index);
+char* text_line_offset(const Text* text, TextPos pos);
 
-Vector2 text_cursor_pos(const Text* text, int index);
+int text_line_length(const Text* line, int index);
 
-Vector2 text_cursor_size(const Text* text, int index);
-
-int text_line_start(const Text* text, int index);
-
-int text_line_end(const Text* text, int index);
+TextLine* text_line_get(const Text* text, int index);
 
 void text_append(Text* text, const char* value);
 
-void text_push(Text* text, int index, char c);
+TextPos text_push(Text* text, TextPos pos, char c);
 
-void text_pop(Text* text, int index);
+TextPos text_pop(Text* text, TextPos pos);
 
 void text_draw(const Text* text, int scrollX, int scrollY);
 

@@ -40,12 +40,12 @@ static void update(void* m, Buffer* buffer) {
     if (key_is_pressed(KEY_B)) motion_move_word_prev(buffer);
     if (key_is_pressed(KEY_E)) motion_move_word_end(buffer);
 
-    if (key_is_pressed(KEY_D) && IsKeyDown(KEY_LEFT_CONTROL)) {
+    if (key_and_modifier_pressed(KEY_D, KEY_LEFT_CONTROL)) {
         for (int i = 0; i < 10; i++) buffer_move_down(buffer);
 
         const Settings* settings = settings_get();
         int spacing = settings->text.line_spacing + settings->text.font_size;
-        buffer->text_scrollY -= spacing * 10;
+        editor_scroll(mode->parent, 0, -(spacing * 10));
     }
 
     if (key_is_pressed(KEY_U) && IsKeyDown(KEY_LEFT_CONTROL)) {
@@ -53,31 +53,31 @@ static void update(void* m, Buffer* buffer) {
 
         const Settings* settings = settings_get();
         int spacing = settings->text.line_spacing + settings->text.font_size;
-        buffer->text_scrollY += spacing * 10;
+        editor_scroll(mode->parent, 0, spacing * 10);
     }
 
     if (key_is_pressed(KEY_O)) {
-        int index = text_line_end(buffer->text, buffer->text_index);
-        text_push(buffer->text, index, '\n');
+        text_line_push(buffer->text, EOL(buffer->text_pos.line));
         buffer_move_down(buffer);
         editor_change_mode(mode->parent, MODE_INSERT);
     }
 
     if (key_and_modifier_pressed(KEY_X, KEY_LEFT_SHIFT)) {
-        text_pop(buffer->text, buffer->text_index + 1);
-    } else if (IsKeyPressed(KEY_X)) {
-        buffer_pop(buffer);
+        text_pop(buffer->text, buffer->text_pos);
+        buffer_move_left(buffer);
+    } else if (key_is_pressed(KEY_X)) {
+        text_pop(buffer->text,
+                 (TextPos){buffer->text_pos.line, buffer->text_pos.offset + 1});
     }
 
     if (IsKeyPressed(KEY_K) && IsKeyDown(KEY_LEFT_SHIFT)) {
         char dir[MAXPATHLEN];
         char path[MAXPATHLEN];
-        int line      = text_line_index(buffer->text, buffer->text_index);
-        int character = text_character_index(buffer->text, buffer->text_index);
+        TextPos pos = buffer->text_pos;
 
         getcwd(dir, MAXPATHLEN);
         snprintf(path, sizeof(path), "%s/%s", dir, buffer->filepath);
-        lsp_hover(path, line, character);
+        lsp_hover(path, pos.line, pos.offset);
     } else if (key_is_pressed(KEY_K)) buffer_move_up(buffer);
 }
 

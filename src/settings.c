@@ -16,8 +16,9 @@ const Settings* const settings_get(void) {
 
 void settings_init(void) {
     settings.text.font         = LoadFontEx(DEFAULT_FONT, 16, NULL, 0);
-    settings.text.filter       = TEXTURE_FILTER_ANISOTROPIC_16X;
+    settings.text.filter       = TEXTURE_FILTER_POINT;
     settings.text.font_size    = 16;
     settings.text.line_spacing = 2;
+
     SetTextureFilter(settings.text.font.texture, settings.text.filter);
 }

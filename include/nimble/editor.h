@@ -38,6 +38,8 @@ void editor_draw_text_cursor(const Editor* editor);
 
 void editor_draw_text(const Editor* editor);
 
+void editor_draw(const Editor* editor);
+
 void editor_draw_status_bar(const Editor* editor);
 
 Editor* editor_create(void);

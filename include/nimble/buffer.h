@@ -1,18 +1,19 @@
 #ifndef INCLUDE_NIMBLE_BUFFER_H_
 #define INCLUDE_NIMBLE_BUFFER_H_
 
-typedef struct Text Text;
+#include "nimble/text.h"
 
 typedef struct Buffer {
     const char* filepath;
     Text* text;
+    int line;
+    int character;
+    TextPos text_pos;
     int text_index;
     int text_scrollY;
 } Buffer;
 
-void buffer_push(Buffer* buffer, char c);
-
-void buffer_pop(Buffer* buffer);
+void buffer_text_pos_set(Buffer* buffer, int line, int offset);
 
 void buffer_move_up(Buffer* buffer);
 
