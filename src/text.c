@@ -1,7 +1,6 @@
 #include "nimble/text.h"
 
 #include <assert.h>
-#include <ctype.h>
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
@@ -29,193 +28,251 @@ static float code_size(int codepoint, Font font, float scale, float spacing) {
 }
 
 bool text_valid(const Text* text) {
-    return text != NULL && text->buffer != NULL;
+    return text != NULL && text->lines != NULL;
 }
 
-int text_line_index(const Text* text, int index) {
-    int line  = 0;
-    char* ptr = text->buffer;
-    while ((ptr = strchr(ptr, '\n'))) {
-        if (ptr - text->buffer >= index) break;
-
-        line++;
-        ptr++;
+void text_append(Text* text, const char* value) {
+    TextPos pos = {0};
+    for (int i = 0; i < strlen(value); i++) {
+        pos = text_push(text, pos, value[i]);
     }
+}
+
+static TextLine text_line_create(const Text* text) {
+    const int CAPACITY = 16;
+    int width          = text->font_size * CAPACITY;
+    int height         = text->font_size;
+    TextLine line;
+
+    line.capacity  = 16;
+    line.length    = 0;
+    line.buffer    = malloc(line.capacity);
+    line.buffer[0] = '\0';
 
     return line;
 }
 
-int text_character_index(const Text* text, int index) {
-    return index - text_line_start(text, index);
+static void text_line_free(const TextLine* line) {
+    free(line->buffer);
 }
 
-int text_next_word(const Text* text, int index) {
-    char* ptr = &text->buffer[index];
+char* text_line_offset(const Text* text, TextPos pos) {
+    int line_index = fmax(fmin(pos.line, text->line_count - 1), 0);
+    TextLine* line = text_line_get(text, line_index);
+    int offset     = fmax(fmin(pos.offset, line->length - 1), 0);
+    return &line->buffer[offset];
+}
 
-    if (*ptr && strchr(TEXT_DELIMITERS, *ptr)) {
-        ptr++;
+TextLine* text_line_get(const Text* text, int index) {
+    if (index < text->line_count && index >= 0) {
+        return &text->lines[index];
+    }
+
+    return NULL;
+}
+
+void text_line_push(Text* text, TextPos pos) {
+    text->line_count++;
+    text->lines = realloc(text->lines, text->line_count * sizeof(TextLine));
+    int index   = pos.line;
+
+    if (index + 2 < text->line_count) {
+        TextLine* src = text_line_get(text, index + 1);
+        TextLine* dst = text_line_get(text, index + 2);
+        int len       = (text->line_count - index - 2) * sizeof(TextLine);
+        memmove(dst, src, len);
+    }
+
+    TextLine* new_line = text_line_get(text, index + 1);
+    TextLine* cur_line = text_line_get(text, index);
+    *new_line          = text_line_create(text);
+
+    int offset         = fmin(pos.offset, cur_line->length - 1);
+    int length         = cur_line->length - offset;
+
+    if (length > 1) {
+        while (length >= new_line->capacity - 1) {
+            new_line->capacity *= 2;
+            char* temp = realloc(new_line->buffer, new_line->capacity);
+            if (temp == NULL) {
+                perror("failed to realloc for newline");
+                exit(EXIT_FAILURE);
+            }
+
+            new_line->buffer = temp;
+        }
+
+        strcpy(new_line->buffer, &cur_line->buffer[offset]);
+        cur_line->buffer[offset] = '\0';
+        cur_line->length -= length;
+        new_line->length += length;
+    }
+}
+
+void text_line_pop(Text* text, TextPos pos) {
+    assert(pos.line >= 0 && pos.line < text->line_count);
+
+    TextLine* line = text_line_get(text, pos.line);
+
+    if (pos.line < text->line_count - 1) {
+        TextLine* src = text_line_get(text, pos.line + 1);
+        int index     = text->line_count - (pos.line + 1);
+        int len       = index * sizeof(TextLine);
+        memmove(line, src, len);
+    }
+
+    text->line_count--;
+    TextLine* temp = realloc(text->lines, text->line_count * sizeof(TextLine));
+    if (temp == NULL) {
+        perror("failed to realloc lines");
+        exit(EXIT_FAILURE);
+    }
+
+    text->lines = temp;
+}
+
+TextPos text_push(Text* text, TextPos pos, char c) {
+    if (c == '\n') {
+        text_line_push(text, pos);
+        return (TextPos){pos.line + 1, 0};
+    }
+
+    TextLine* line = text_line_get(text, pos.line);
+    if (line->length >= line->capacity - 1) {
+        line->capacity *= 2;
+        char* temp = realloc(line->buffer, line->capacity);
+        if (temp == NULL) {
+            perror("failed to realloc line buffer");
+            exit(EXIT_FAILURE);
+        }
+
+        line->buffer = temp;
+    }
+
+    int offset   = fmin(pos.offset, line->length);
+    char* cursor = &line->buffer[offset];
+    int length   = line->length - offset;
+    memmove(&cursor[1], cursor, length);
+
+    line->length += 1;
+    line->buffer[offset]       = c;
+    line->buffer[line->length] = '\0';
+
+    return (TextPos){pos.line, offset + 1};
+}
+
+TextPos text_pop(Text* text, TextPos pos) {
+    assert(text != NULL);
+    assert(pos.line < text->line_count);
+
+    TextLine* line = text_line_get(text, pos.line);
+    int offset     = fmax(fmin(pos.offset, line->length), 0);
+    if (offset == 0 && pos.line == 0) return pos;
+
+    if (offset == 0) {
+        TextLine* prev = text_line_get(text, pos.line - 1);
+        int length     = prev->length + line->length;
+
+        while (length >= prev->capacity - 1) {
+            prev->capacity *= 2;
+
+            if (length < prev->capacity - 1) {
+                char* temp = realloc(prev->buffer, prev->capacity);
+                if (temp == NULL) {
+                    perror("failed to realloc prev line buffer");
+                    exit(EXIT_FAILURE);
+                }
+
+                prev->buffer = temp;
+            }
+        }
+
+        char* src  = line->buffer;
+        char* dst  = &prev->buffer[prev->length];
+        int offset = prev->length;
+        memcpy(dst, src, line->length);
+        prev->length               = length;
+        prev->buffer[prev->length] = '\0';
+        text_line_pop(text, pos);
+
+        return (TextPos){pos.line - 1, offset};
     } else {
-        while (*ptr && !(isspace(*ptr) || strchr(TEXT_DELIMITERS, *ptr))) {
-            ptr++;
-        }
+        TextLine* line = text_line_get(text, pos.line);
+        char* dst      = &line->buffer[pos.offset - 1];
+        char* src      = &line->buffer[pos.offset];
+        int len        = fmin(line->length - offset, line->length - 1);
+        memmove(dst, src, len);
+
+        line->length--;
+        line->buffer[line->length] = '\0';
+        return (TextPos){pos.line, pos.offset - 1};
     }
-
-    while (*ptr && isspace(*ptr)) {
-        ptr++;
-    }
-
-    return ptr - text->buffer;
-}
-
-int text_previous_word(const Text* text, int index) {
-    char* ptr = &text->buffer[index];
-
-    while (ptr > text->buffer && isspace(*(ptr - 1))) {
-        ptr--;
-    }
-
-    if (ptr > text->buffer && strchr(TEXT_DELIMITERS, *(ptr - 1))) {
-        ptr--;
-    } else {
-        while (ptr > text->buffer && !isspace(*(ptr - 1)) &&
-               !strchr(TEXT_DELIMITERS, *(ptr - 1))) {
-            ptr--;
-        }
-    }
-
-    return fmax(ptr - text->buffer, 0);
-}
-
-int text_line_start(const Text* text, int index) {
-    const char* ptr = &text->buffer[index];
-    for (int i = index - 1; i >= 0; i--) {
-        if (text->buffer[i] == '\n') {
-            return i + 1;
-        }
-    }
-
-    return 0;
-}
-
-int text_line_end(const Text* text, int index) {
-    const char* ptr = &text->buffer[index];
-    for (int i = index; i < text->length; i++) {
-        if (text->buffer[i] == '\n') {
-            return i;
-        }
-    }
-
-    return text->length;
-}
-
-void text_append(Text* text, const char* value) {
-    for (int i = 0; i < strlen(value); i++) {
-        text_push(text, i, value[i]);
-    }
-}
-
-void text_push(Text* text, int index, char c) {
-    text->buffer = realloc(text->buffer, text->length + 2);
-
-    int len      = text->length - index;
-    char* cursor = &text->buffer[index];
-    memmove(&cursor[1], cursor, len);
-
-    text->buffer[index]            = c;
-    text->buffer[text->length + 1] = '\0';
-    text->length++;
-}
-
-void text_pop(Text* text, int index) {
-    if (index == 0 || text->length <= 0 || index >= text->length) return;
-
-    text->length--;
-    index--;
-    int len      = text->length - index;
-    char* cursor = &text->buffer[index];
-    memmove(cursor, &cursor[1], len);
-
-    text->buffer               = realloc(text->buffer, text->length + 1);
-    text->buffer[text->length] = '\0';
 }
 
 void text_draw(const Text* text, int scrollX, int scrollY) {
     assert(text_valid(text));
 
-    Font font         = text->font;
-    float font_size   = text->font_size;
-    float textOffsetX = 0;
-    float textOffsetY = 0;
-    float scaleFactor = text->font_size / text->font.baseSize;
-    int spacing       = text->font_size / 10;
+    Font font        = text->font;
+    float font_size  = text->font_size;
+    int line_spacing = text->line_spacing;
+    float scale      = text->font_size / text->font.baseSize;
+    int spacing      = text->font_size / 10;
+    int offsetX      = 0;
+    int offsetY      = scrollY;
 
-    for (int i = 0; i < text->length;) {
-        int codepointByteCount = 0;
-        int codepoint = GetCodepointNext(&text->buffer[i], &codepointByteCount);
+    for (int l_idx = 0; l_idx < text->line_count; l_idx++) {
+        TextLine* line  = &text->lines[l_idx];
+        const char* ptr = line->buffer;
 
-        if (codepoint == '\n') {
-            textOffsetY += text->font_size + text->line_spacing;
-            textOffsetX = 0;
-        } else {
+        while (*ptr) {
+            int byte_count = 0;
+            int codepoint  = GetCodepointNext(ptr, &byte_count);
             if (codepoint != ' ' && codepoint != '\t') {
-                float size  = text->font_size;
-                Vector2 pos = {textOffsetX + scrollX, textOffsetY + scrollY};
-                DrawTextCodepoint(text->font, codepoint, pos, size, WHITE);
+                Vector2 pos = {offsetX, offsetY};
+                DrawTextCodepoint(font, codepoint, pos, font_size, WHITE);
             }
 
-            textOffsetX += code_size(codepoint, font, scaleFactor, spacing);
+            offsetX += code_size(codepoint, font, scale, spacing);
+            ptr += byte_count;
         }
 
-        i += codepointByteCount;
+        offsetY += font_size + line_spacing;
+        offsetX = 0;
     }
 }
 
-Vector2 text_cursor_size(const Text* text, int index) {
-    int temp      = 0;
-    int spacing   = text->font_size / 10;
-    float scale   = text->font_size / text->font.baseSize;
-    int codepoint = GetCodepointNext(&text->buffer[index], &temp);
-    float width   = code_size(codepoint, text->font, scale, spacing);
-    float height  = text->font_size;
-    return (Vector2){width, height};
-}
-
-Vector2 text_cursor_pos(const Text* text, int index) {
-    int lines     = 0;
-    char* p_start = text->buffer;
-    char* p_end   = text->buffer;
-
+Rectangle text_cursor_get(const Text* text, TextPos pos) {
     assert(text_valid(text));
-    while ((p_end = strchr(p_end, '\n'))) {
-        if (index <= p_end - text->buffer) break;
 
-        lines++;
-        p_end++;
-        p_start = p_end;
-    }
+    const TextLine* line = &text->lines[pos.line];
+    int temp;
+    int codepoint = GetCodepointNext(&line->buffer[pos.offset], &temp);
+    float scale   = text->font_size / text->font.baseSize;
+    int spacing   = text->font_size / 10;
+    float x       = 0;
+    float y       = (text->font_size + text->line_spacing) * pos.line;
+    float w       = code_size(codepoint, text->font, scale, spacing);
+    float h       = text->font_size;
 
-    int line_len      = index - (p_start - text->buffer);
-    float textOffsetX = 0;
-    float textOffsetY = (text->font_size + text->line_spacing) * lines;
-    float scaleFactor = text->font_size / text->font.baseSize;
-    int spacing       = text->font_size / 10;
-
-    for (int i = 0; i < line_len;) {
+    for (int i = 0; i < fmin(pos.offset, line->length);) {
         int codepointByteCount = 0;
-        int codepoint = GetCodepointNext(&p_start[i], &codepointByteCount);
+        int codepoint = GetCodepointNext(&line->buffer[i], &codepointByteCount);
 
-        textOffsetX += code_size(codepoint, text->font, scaleFactor, spacing);
+        x += code_size(codepoint, text->font, scale, spacing);
         i += codepointByteCount;
     }
 
-    return (Vector2){textOffsetX, textOffsetY};
+    return (Rectangle){x, y, w, h};
 }
 
 Text* text_new(Font font, int font_size, int line_spacing) {
     Text* text         = calloc(1, sizeof(Text));
-    text->buffer       = calloc(1, sizeof(char));
     text->line_spacing = line_spacing;
     text->font_size    = font_size;
     text->font         = font;
+    text->lines        = calloc(1, sizeof(*text->lines));
+    text->lines[0]     = text_line_create(text);
+    text->line_count   = 1;
+
     return text;
 }

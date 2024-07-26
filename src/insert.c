@@ -5,6 +5,7 @@
 
 #include "nimble/buffer.h"
 #include "nimble/editor.h"
+#include "nimble/text.h"
 #include "raylib.h"
 
 static void on_enter(void* m) {
@@ -22,16 +23,25 @@ static void update(void* m, Buffer* buffer) {
 
     int key      = 0;
     while ((key = GetCharPressed()) != 0) {
-        buffer_push(buffer, key);
+        buffer->text_pos = text_push(buffer->text, buffer->text_pos, key);
     }
 
     if (key_is_pressed(KEY_ESCAPE)) {
         editor_change_mode(mode->parent, MODE_NORMAL);
     }
 
-    if (key_is_pressed(KEY_TAB)) buffer_push(buffer, '\t');
-    if (key_is_pressed(KEY_ENTER)) buffer_push(buffer, '\n');
-    if (key_is_pressed(KEY_BACKSPACE)) buffer_pop(buffer);
+    if (key_is_pressed(KEY_TAB)) {
+        buffer->text_pos = text_push(buffer->text, buffer->text_pos, '\t');
+    }
+
+    if (key_is_pressed(KEY_ENTER)) {
+        buffer->text_pos = text_push(buffer->text, buffer->text_pos, '\n');
+    }
+
+    if (key_is_pressed(KEY_BACKSPACE)) {
+        buffer->text_pos = text_pop(buffer->text, buffer->text_pos);
+    }
+
     if (key_is_pressed(KEY_LEFT)) buffer_move_left(buffer);
     if (key_is_pressed(KEY_RIGHT)) buffer_move_right(buffer);
     if (key_is_pressed(KEY_DOWN)) buffer_move_down(buffer);

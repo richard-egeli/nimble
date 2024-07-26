@@ -8,15 +8,21 @@ set(CMAKE_C_STANDARD_REQUIRED YES)
 set(CMAKE_C_EXTENSIONS NO)
 set(CMAKE_BUILD_TYPE Debug)
 
-set(RAYLIB_VERSION 5.0)
-find_package(raylib ${RAYLIB_VERSION} QUIET)
+# Add the ASan flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+
+find_package(raylib QUIET)
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib
     include(FetchContent)
     FetchContent_Declare(
         raylib
         DOWNLOAD_EXTRACT_TIMESTAMP OFF
-        URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
+        URL https://github.com/raysan5/raylib/archive/refs/heads/master.zip
     )
+
+    # FetchContent_MakeAvailable(raylib)
     FetchContent_GetProperties(raylib)
     if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
         set(FETCHCONTENT_QUIET NO)

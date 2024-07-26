@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
+#include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
@@ -87,7 +88,10 @@ void editor_scroll(Editor* editor, int x, int y) {
     Buffer* buffer = editor->buffers[editor->buffer_index];
     assert(buffer != NULL);
 
-    buffer->text_scrollY = fmin(0, buffer->text_scrollY + y);
+    int padding = 40;
+    int spacing = buffer->text->font_size + buffer->text->line_spacing;
+    int max = buffer->text->line_count * spacing - GetScreenHeight() + padding;
+    buffer->text_scrollY = fmax(fmin(0, buffer->text_scrollY + y), -max);
 }
 
 void editor_draw_status_bar(const Editor* editor) {
@@ -100,9 +104,8 @@ void editor_draw_status_bar(const Editor* editor) {
     Vector2 position = {.x = 12, .y = height - 20};
 
     char status[32];
-    int line      = text_line_index(buffer->text, buffer->text_index);
-    int character = text_character_index(buffer->text, buffer->text_index);
-    snprintf(status, sizeof(status), "%d:%d", line, character);
+    TextPos pos = buffer->text_pos;
+    snprintf(status, sizeof(status), "%d:%d", pos.line, pos.offset);
 
     const char* mode = MODE_NAME[editor->mode];
     DrawRectangle(0, height - 24, width, 24, DARKBROWN);
@@ -116,10 +119,9 @@ void editor_draw_status_bar(const Editor* editor) {
 
 void editor_draw_text_cursor(const Editor* editor) {
     Buffer* buffer = editor->buffers[editor->buffer_index];
-    Vector2 c_pos  = text_cursor_pos(buffer->text, buffer->text_index);
-    Vector2 c_size = text_cursor_size(buffer->text, buffer->text_index);
+    Rectangle c    = text_cursor_get(buffer->text, buffer->text_pos);
     int scrollY    = buffer->text_scrollY;
-    DrawRectangle(c_pos.x, c_pos.y + scrollY, c_size.x, c_size.y, BLUE);
+    DrawRectangle(c.x, c.y + scrollY, c.width, c.height, BLUE);
 }
 
 void editor_draw_text(const Editor* editor) {

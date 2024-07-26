@@ -2,54 +2,54 @@
 #include <pthread.h>
 #include <raylib.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 #include "lsp/lsp.h"
 #include "nimble/editor.h"
 #include "nimble/settings.h"
+#include "rlgl.h"
 
 #define MAX_BUFFER 1024
+
+static void DrawTxt(const char* text, Vector2 position) {
+    const Settings* settings = settings_get();
+    Font font                = settings->text.font;
+    float spacing            = (float)font.baseSize / 10;
+    DrawTextEx(font, text, position, font.baseSize, spacing, WHITE);
+}
+
+static void DrawRTex(RenderTexture rt, Vector2 position) {
+    int w = rt.texture.width;
+    int h = rt.texture.height;
+    DrawTextureRec(rt.texture, (Rectangle){0, 0, w, h}, position, WHITE);
+}
 
 int main(int argc, char** argv) {
     InitWindow(1280, 768, "Nimble");
     SetTargetFPS(60);
     SetExitKey(0);
 
-    lsp_start();
     settings_init();
+    lsp_start();
 
-    Editor* editor = editor_create();
-    editor_open_file(editor, "src/text.c");
+    Editor* editor           = editor_create();
+    const Settings* settings = settings_get();
+    editor_open_file(editor, "main.c");
 
-    char* res = editor_file_search(editor, "CMakeLists");
-    printf("\n%s\n", res);
-    free(res);
-
-    int scrollY       = 0;
-    bool should_close = false;
-    bool draw_once    = false;
     while (!WindowShouldClose()) {
+        editor_update(editor);
+
         BeginDrawing();
         ClearBackground(BLACK);
 
-        editor_update(editor);
-
-        int scroll = GetMouseWheelMove() * 16;
-
-        editor_scroll(editor, 0, scroll);
         editor_draw_text_cursor(editor);
         editor_draw_text(editor);
         editor_draw_status_bar(editor);
 
-        if (IsKeyPressed(KEY_S) && IsKeyDown(KEY_LEFT_SUPER)) {
-            printf("Save File\n");
-            // save_text(buffer->text);
-        }
-
         EndDrawing();
     }
+
+    CloseWindow();
 
     return 0;
 }
