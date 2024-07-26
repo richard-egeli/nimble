@@ -30,6 +30,8 @@ int editor_open_file(Editor* editor, const char* relative_path);
 
 void editor_change_mode(Editor* editor, Mode mode);
 
+void editor_hover_preview(Editor* editor, const char* text);
+
 void editor_update(Editor* editor);
 
 void editor_scroll(Editor* editor, int x, int y);

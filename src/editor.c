@@ -70,6 +70,10 @@ void editor_change_mode(Editor* editor, Mode mode) {
     new->on_enter(new);
 }
 
+void editor_hover_preview(Editor* editor, const char* text) {
+    // FBO / RenderTexture are not working as expected in Raylib so has to wait
+}
+
 void editor_update(Editor* editor) {
     assert(editor != NULL);
     assert(editor->buffers != NULL);

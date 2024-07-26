@@ -1,20 +1,23 @@
 #ifndef INCLUDE_CVIM_LSP_H_
 #define INCLUDE_CVIM_LSP_H_
 
+#include <stdbool.h>
 typedef enum {
+    LSP_EVENT_TYPE_INIT,
+    LSP_EVENT_TYPE_OPEN,
     LSP_EVENT_TYPE_HOVER,
 } LSP_EventType;
 
 typedef struct {
-    int id;
-    const char* text;
+    char* kind;
+    char* value;
 } LSP_EventHover;
 
 typedef struct {
     LSP_EventType type;
     union {
         LSP_EventHover hover;
-    } payload;
+    } data;
 } LSP_Event;
 
 typedef struct {
@@ -25,6 +28,10 @@ typedef struct {
 void lsp_hover(const char* path, int line, int character);
 
 void lsp_open(const char* path, const char* content);
+
+LSP_Event* lsp_poll(void);
+
+void lsp_free(LSP_Event* event);
 
 void lsp_start(void);
 

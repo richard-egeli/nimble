@@ -70,7 +70,7 @@ void motion_move_word_end(Buffer* buffer) {
         line             = text_line_get(buffer->text, buffer->text_pos.line);
         if (line == NULL) return;
 
-        ptr = &line->buffer[0];
+        ptr = line->buffer;
     }
 
     while (*ptr && isspace(*ptr)) ptr++;

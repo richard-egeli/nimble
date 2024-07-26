@@ -8,7 +8,7 @@ static Settings settings;
 
 static const char* DEFAULT_FONT =
     "/opt/homebrew/Caskroom/font-mononoki-nerd-font/3.2.1/"
-    "MononokiNerdFont-Regular.ttf";
+    "MononokiNerdFontMono-Regular.ttf";
 
 const Settings* const settings_get(void) {
     return &settings;

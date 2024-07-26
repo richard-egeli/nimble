@@ -2,6 +2,8 @@
 #include <pthread.h>
 #include <raylib.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "lsp/lsp.h"
@@ -21,7 +23,7 @@ static void DrawTxt(const char* text, Vector2 position) {
 static void DrawRTex(RenderTexture rt, Vector2 position) {
     int w = rt.texture.width;
     int h = rt.texture.height;
-    DrawTextureRec(rt.texture, (Rectangle){0, 0, w, h}, position, WHITE);
+    DrawTextureRec(rt.texture, (Rectangle){0, 0, w, -h}, position, WHITE);
 }
 
 int main(int argc, char** argv) {
@@ -41,6 +43,18 @@ int main(int argc, char** argv) {
 
         BeginDrawing();
         ClearBackground(BLACK);
+
+        LSP_Event* event;
+        while ((event = lsp_poll()) != NULL) {
+            printf("Got event on main %d\n", event->type);
+            if (event->type == 2) {
+                printf("Kind: %s\nValue:\n%s\n",
+                       event->data.hover.kind,
+                       event->data.hover.value);
+            }
+
+            lsp_free(event);
+        }
 
         editor_draw_text_cursor(editor);
         editor_draw_text(editor);

@@ -1,6 +1,5 @@
 
-add_library(lsp STATIC lsp.c lsp.h)
-
+add_library(lsp STATIC lsp.c lsp.h message_queue.c message_queue.h)
 
 set(YYJSON_VERSION 0.10.0)
 find_package(yyjson ${YYJSON_VERSION} QUIET)
