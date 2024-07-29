@@ -6,14 +6,8 @@
 typedef struct Buffer {
     const char* filepath;
     Text* text;
-    int line;
-    int character;
-    TextPos text_pos;
-    int text_index;
-    int text_scrollY;
+    Vector2 scroll;
 } Buffer;
-
-void buffer_text_pos_set(Buffer* buffer, int line, int offset);
 
 void buffer_move_up(Buffer* buffer);
 

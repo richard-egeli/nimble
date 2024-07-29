@@ -1,19 +1,32 @@
 #ifndef INCLUDE_NIMBLE_SETTINGS_H_
 #define INCLUDE_NIMBLE_SETTINGS_H_
 
+#include <stddef.h>
+
 #include "raylib.h"
 
-typedef struct Settings {
-    struct {
-        Font font;
-        int font_size;
-        int line_spacing;
-        int filter;
-    } text;
-} Settings;
+typedef struct TextConfig {
+    Font font;
+    int font_filter;
+    size_t line_spacing;
+    size_t char_spacing;
+    size_t tab_space;
+} TextConfig;
 
-const Settings* const settings_get(void);
+typedef struct Config {
+    union {
+        TextConfig* text;
+    };
+} Config;
 
-void settings_init(void);
+typedef enum ConfigType {
+    CONFIG_TEXT,
+} ConfigType;
+
+void config_font_change(int step);
+
+const void* config_get(ConfigType type);
+
+void config_init(void);
 
 #endif  // INCLUDE_NIMBLE_SETTINGS_H_

@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <raylib.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,33 +10,16 @@
 #include "lsp/lsp.h"
 #include "nimble/editor.h"
 #include "nimble/settings.h"
-#include "rlgl.h"
-
-#define MAX_BUFFER 1024
-
-static void DrawTxt(const char* text, Vector2 position) {
-    const Settings* settings = settings_get();
-    Font font                = settings->text.font;
-    float spacing            = (float)font.baseSize / 10;
-    DrawTextEx(font, text, position, font.baseSize, spacing, WHITE);
-}
-
-static void DrawRTex(RenderTexture rt, Vector2 position) {
-    int w = rt.texture.width;
-    int h = rt.texture.height;
-    DrawTextureRec(rt.texture, (Rectangle){0, 0, w, -h}, position, WHITE);
-}
 
 int main(int argc, char** argv) {
     InitWindow(1280, 768, "Nimble");
     SetTargetFPS(60);
     SetExitKey(0);
 
-    settings_init();
+    config_init();
     lsp_start();
 
-    Editor* editor           = editor_create();
-    const Settings* settings = settings_get();
+    Editor* editor = editor_create();
     editor_open_file(editor, "main.c");
 
     while (!WindowShouldClose()) {
@@ -43,6 +27,12 @@ int main(int argc, char** argv) {
 
         BeginDrawing();
         ClearBackground(BLACK);
+
+        int wheel = GetMouseWheelMove();
+        if (wheel != 0) {
+            config_font_change(wheel);
+            editor_refresh(editor);
+        }
 
         LSP_Event* event;
         while ((event = lsp_poll()) != NULL) {
@@ -64,6 +54,5 @@ int main(int argc, char** argv) {
     }
 
     CloseWindow();
-
     return 0;
 }

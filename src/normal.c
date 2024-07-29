@@ -14,6 +14,7 @@
 #include "nimble/settings.h"
 #include "nimble/text.h"
 #include "raylib.h"
+#include "text/string.h"
 
 static void on_enter(void* m) {
 }
@@ -43,41 +44,43 @@ static void update(void* m, Buffer* buffer) {
     if (key_and_modifier_pressed(KEY_D, KEY_LEFT_CONTROL)) {
         for (int i = 0; i < 10; i++) buffer_move_down(buffer);
 
-        const Settings* settings = settings_get();
-        int spacing = settings->text.line_spacing + settings->text.font_size;
+        const TextConfig* cfg = config_get(CONFIG_TEXT);
+        int spacing           = cfg->font.baseSize + cfg->line_spacing;
         editor_scroll(mode->parent, 0, -(spacing * 10));
+        text_scroll(buffer->text, 0, -(spacing * 10));
     }
 
     if (key_is_pressed(KEY_U) && IsKeyDown(KEY_LEFT_CONTROL)) {
         for (int i = 0; i < 10; i++) buffer_move_up(buffer);
 
-        const Settings* settings = settings_get();
-        int spacing = settings->text.line_spacing + settings->text.font_size;
-        editor_scroll(mode->parent, 0, spacing * 10);
+        const TextConfig* cfg = config_get(CONFIG_TEXT);
+        int spacing           = cfg->line_spacing + cfg->font.baseSize;
+        text_scroll(buffer->text, 0, spacing * 10);
     }
 
     if (key_is_pressed(KEY_O)) {
-        text_line_push(buffer->text, EOL(buffer->text_pos.line));
-        buffer_move_down(buffer);
+        String* str = string_array_at(buffer->text->lines, buffer->text->line);
+        buffer->text->offset = string_length(str);
         editor_change_mode(mode->parent, MODE_INSERT);
+        text_push(buffer->text, '\n');
     }
 
     if (key_and_modifier_pressed(KEY_X, KEY_LEFT_SHIFT)) {
-        text_pop(buffer->text, buffer->text_pos);
-        buffer_move_left(buffer);
+        text_pop(buffer->text);
     } else if (key_is_pressed(KEY_X)) {
-        text_pop(buffer->text,
-                 (TextPos){buffer->text_pos.line, buffer->text_pos.offset + 1});
+        buffer_move_right(buffer);
+        text_pop(buffer->text);
     }
 
     if (IsKeyPressed(KEY_K) && IsKeyDown(KEY_LEFT_SHIFT)) {
         char dir[MAXPATHLEN];
         char path[MAXPATHLEN];
-        TextPos pos = buffer->text_pos;
+        size_t line   = buffer->text->line;
+        size_t offset = buffer->text->offset;
 
         getcwd(dir, MAXPATHLEN);
         snprintf(path, sizeof(path), "%s/%s", dir, buffer->filepath);
-        lsp_hover(path, pos.line, pos.offset);
+        lsp_hover(path, line, offset);
     } else if (key_is_pressed(KEY_K)) buffer_move_up(buffer);
 }
 

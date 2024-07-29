@@ -9,9 +9,16 @@ set(CMAKE_C_EXTENSIONS NO)
 set(CMAKE_BUILD_TYPE Debug)
 
 # Add the ASan flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
-set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+endif()
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    add_definitions(-DNDEBUG)
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+endif()
 
 find_package(raylib QUIET)
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib
@@ -33,6 +40,7 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
 endif()
 
 add_subdirectory(lib/lsp)
+add_subdirectory(lib/text)
 add_executable(${PROJECT_NAME} main.c)
 
 target_sources(${PROJECT_NAME} PRIVATE
@@ -47,17 +55,11 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include lib)
-target_link_libraries(${PROJECT_NAME} raylib lsp)
+target_link_libraries(${PROJECT_NAME} raylib lsp text)
 
 if (${BUILD_UNIT_TESTS})
+    enable_testing()
     add_subdirectory(tests)
-endif()
-
-# Web Configurations
-if (${PLATFORM} STREQUAL "Web")
-    # Tell Emscripten to build an example.html file.
-    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
-    target_link_options(${PROJECT_NAME} PUBLIC "-sUSE_GLFW=3")
 endif()
 
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)

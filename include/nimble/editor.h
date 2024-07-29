@@ -34,6 +34,8 @@ void editor_hover_preview(Editor* editor, const char* text);
 
 void editor_update(Editor* editor);
 
+void editor_refresh(const Editor* editor);
+
 void editor_scroll(Editor* editor, int x, int y);
 
 void editor_draw_text_cursor(const Editor* editor);

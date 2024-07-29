@@ -13,7 +13,9 @@
 #include "nimble/buffer.h"
 #include "nimble/insert.h"
 #include "nimble/normal.h"
+#include "nimble/settings.h"
 #include "nimble/text.h"
+#include "text/string_array.h"
 
 static const char* const MODE_NAME[] = {
     [MODE_NORMAL] = "NORMAL",
@@ -70,6 +72,11 @@ void editor_change_mode(Editor* editor, Mode mode) {
     new->on_enter(new);
 }
 
+void editor_refresh(const Editor* editor) {
+    const Buffer* buffer   = editor->buffers[editor->buffer_index];
+    buffer->text->is_dirty = true;
+}
+
 void editor_hover_preview(Editor* editor, const char* text) {
     // FBO / RenderTexture are not working as expected in Raylib so has to wait
 }
@@ -89,48 +96,50 @@ void editor_scroll(Editor* editor, int x, int y) {
     assert(editor != NULL);
     assert(editor->buffers != NULL);
     assert(editor->buffer_length > 0);
-    Buffer* buffer = editor->buffers[editor->buffer_index];
+    Buffer* buffer        = editor->buffers[editor->buffer_index];
+
+    const TextConfig* cfg = config_get(CONFIG_TEXT);
     assert(buffer != NULL);
 
-    int padding = 40;
-    int spacing = buffer->text->font_size + buffer->text->line_spacing;
-    int max = buffer->text->line_count * spacing - GetScreenHeight() + padding;
-    buffer->text_scrollY = fmax(fmin(0, buffer->text_scrollY + y), -max);
+    int padding      = 40;
+    int spacing      = cfg->font.baseSize + cfg->line_spacing;
+    int line_count   = string_array_length(buffer->text->lines);
+    int max          = line_count * spacing - GetScreenHeight() + padding;
+    buffer->scroll.y = fmax(fmin(0, buffer->scroll.y + y), -max);
 }
 
 void editor_draw_status_bar(const Editor* editor) {
-    int width            = GetScreenWidth();
-    int height           = GetScreenHeight();
-    const Buffer* buffer = editor->buffers[editor->buffer_index];
+    int width             = GetScreenWidth();
+    int height            = GetScreenHeight();
+    const Buffer* buffer  = editor->buffers[editor->buffer_index];
+    const TextConfig* cfg = config_get(CONFIG_TEXT);
 
     Rectangle rect   = {.x = 0, .y = height - 16, .width = width, .height = 16};
-    float spacing    = (float)buffer->text->font.baseSize / 10;
     Vector2 position = {.x = 12, .y = height - 20};
 
     char status[32];
-    TextPos pos = buffer->text_pos;
-    snprintf(status, sizeof(status), "%d:%d", pos.line, pos.offset);
+    size_t line   = buffer->text->line;
+    size_t offset = buffer->text->offset;
+    snprintf(status, sizeof(status), "%zu:%zu", line, offset);
 
     const char* mode = MODE_NAME[editor->mode];
     DrawRectangle(0, height - 24, width, 24, DARKBROWN);
-    DrawTextEx(buffer->text->font, mode, position, 16, spacing, WHITE);
+    DrawTextEx(cfg->font, mode, position, 16, cfg->char_spacing, WHITE);
 
-    Vector2 size = MeasureTextEx(buffer->text->font, status, 16, spacing);
-
+    Vector2 size = MeasureTextEx(cfg->font, status, 16, cfg->char_spacing);
     position.x   = width - size.x - 16;
-    DrawTextEx(buffer->text->font, status, position, 16, spacing, WHITE);
+    DrawTextEx(cfg->font, status, position, 16, cfg->char_spacing, WHITE);
 }
 
 void editor_draw_text_cursor(const Editor* editor) {
     Buffer* buffer = editor->buffers[editor->buffer_index];
-    Rectangle c    = text_cursor_get(buffer->text, buffer->text_pos);
-    int scrollY    = buffer->text_scrollY;
-    DrawRectangle(c.x, c.y + scrollY, c.width, c.height, BLUE);
+    Rectangle c    = text_cursor_get(buffer->text);
+    DrawRectangle(c.x, c.y, c.width, c.height, BLUE);
 }
 
 void editor_draw_text(const Editor* editor) {
     const Buffer* buffer = editor->buffers[editor->buffer_index];
-    text_draw(buffer->text, 0, buffer->text_scrollY);
+    text_draw(buffer->text, 0, buffer->scroll.y);
 }
 
 int editor_open_file(Editor* editor, const char* relative_path) {

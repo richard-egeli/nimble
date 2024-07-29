@@ -7,17 +7,23 @@
 
 #include "nimble/buffer.h"
 #include "nimble/text.h"
+#include "text/string.h"
 
 static const char* TEXT_DELIMITERS = "*!#()<>{}[].,/\";'";
 
 void motion_move_word_next(Buffer* buffer) {
-    const TextLine* line = text_line_get(buffer->text, buffer->text_pos.line);
-    const char* ptr      = &line->buffer[buffer->text_pos.offset];
+    size_t line          = buffer->text->line;
+    size_t offset        = buffer->text->offset;
+    const String* string = string_array_at(buffer->text->lines, line);
+    const char* base     = string_iter(string);
+    const char* ptr      = &base[offset];
 
-    if (buffer->text_pos.offset >= line->length - 1) {
-        buffer->text_pos = (TextPos){buffer->text_pos.line + 1, 0};
-        line             = text_line_get(buffer->text, buffer->text_pos.line);
-        ptr              = text_line_offset(buffer->text, buffer->text_pos);
+    if (offset >= string_length(string) - 1) {
+        line += 1;
+        offset = 0;
+        string = string_array_at(buffer->text->lines, line);
+        base   = string_iter(string);
+        ptr    = &base[offset];
     } else if (*ptr && strchr(TEXT_DELIMITERS, *ptr)) {
         ptr++;
     } else {
@@ -27,50 +33,60 @@ void motion_move_word_next(Buffer* buffer) {
     }
 
     while (*ptr && isspace(*ptr)) ptr++;
-
-    int line_idx   = buffer->text_pos.line;
-    int offset_idx = fmin(ptr - line->buffer, line->length - 1);
-    buffer_text_pos_set(buffer, line_idx, offset_idx);
+    buffer->text->offset = fmin(ptr - base, string_length(string));
+    buffer->text->line   = line;
 }
 
 void motion_move_word_prev(Buffer* buffer) {
-    const TextLine* line = text_line_get(buffer->text, buffer->text_pos.line);
-    const char* ptr      = text_line_offset(buffer->text, buffer->text_pos);
+    size_t line          = buffer->text->line;
+    size_t offset        = buffer->text->offset;
+    const String* string = string_array_at(buffer->text->lines, line);
+    const char* base     = string_iter(string);
+    const char* ptr      = &base[offset];
 
-    while (ptr > line->buffer && isspace(*(ptr - 1))) ptr--;
+    while (ptr > base && isspace(*(ptr - 1))) ptr--;
 
-    if (fmax(ptr - line->buffer, 0) <= 0) {
-        if (buffer->text_pos.line == 0) return;
+    if (fmax(ptr - base, 0) == 0) {
+        if (line == 0) return;
 
-        line = text_line_get(buffer->text, buffer->text_pos.line - 1);
-        ptr  = text_line_offset(buffer->text, buffer->text_pos);
-        buffer_text_pos_set(buffer, buffer->text_pos.line - 1, 0x7FFFFFFF);
-        return;
-    } else if (ptr > line->buffer && strchr(TEXT_DELIMITERS, *(ptr - 1))) {
+        string = string_array_at(buffer->text->lines, line - 1);
+        base   = string_iter(string);
+        offset = fmax(string_length(string) - 1, 0);
+        ptr    = &base[offset];
+        line -= 1;
+    } else if (ptr > base && strchr(TEXT_DELIMITERS, *(ptr - 1))) {
         ptr--;
     } else {
-        while (ptr > line->buffer && !isspace(*(ptr - 1)) &&
+        while (ptr > base && !isspace(*(ptr - 1)) &&
                !strchr(TEXT_DELIMITERS, *(ptr - 1))) {
             ptr--;
         }
     }
 
-    int line_idx   = buffer->text_pos.line;
-    int offset_idx = fmax(ptr - line->buffer, 0);
-    buffer_text_pos_set(buffer, line_idx, offset_idx);
+    buffer->text->line   = line;
+    buffer->text->offset = fmax(ptr - base, 0);
 }
 
 void motion_move_word_end(Buffer* buffer) {
-    const TextLine* line = text_line_get(buffer->text, buffer->text_pos.line);
-    const char* ptr      = &line->buffer[buffer->text_pos.offset + 1];
+    size_t line          = buffer->text->line;
+    size_t offset        = buffer->text->offset;
+    const String* string = string_array_at(buffer->text->lines, line);
+    const char* base     = string_iter(string);
+    const char* ptr      = &base[offset + 1];
+
     if (*ptr && ptr[1] && strchr(TEXT_DELIMITERS, ptr[1])) ptr++;
+    if (offset >= string_length(string) - 1) {
+        offset = 0;
+        line += 1;
 
-    if (buffer->text_pos.offset >= line->length - 1) {
-        buffer->text_pos = (TextPos){buffer->text_pos.line + 1, 0};
-        line             = text_line_get(buffer->text, buffer->text_pos.line);
-        if (line == NULL) return;
-
-        ptr = line->buffer;
+        string = string_array_at(buffer->text->lines, line);
+        base   = string_iter(string);
+        ptr    = &base[offset];
+        if (*ptr && strchr(TEXT_DELIMITERS, *ptr)) {
+            buffer->text->offset = fmin(ptr - base, string_length(string));
+            buffer->text->line   = line;
+            return;
+        }
     }
 
     while (*ptr && isspace(*ptr)) ptr++;
@@ -82,6 +98,6 @@ void motion_move_word_end(Buffer* buffer) {
         ptr++;
     }
 
-    int offset       = fmin(ptr - line->buffer, line->length - 1);
-    buffer->text_pos = (TextPos){buffer->text_pos.line, offset};
+    buffer->text->offset = fmin(ptr - base, string_length(string));
+    buffer->text->line   = line;
 }

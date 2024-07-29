@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +18,7 @@ static FILE* output_pipe;
 static pthread_t listener_thread;
 static MessageQueue message_queue;
 
-static volatile int event_type[64];
+static atomic_int event_type[64];
 
 static int lsp_get_id(void) {
     static int id = 0;
@@ -52,8 +53,8 @@ static void lsp_deserialise_hover(yyjson_doc* doc) {
     }
 }
 
-static void lsp_deserialise(int id, yyjson_doc* doc) {
-    switch (id) {
+static void lsp_deserialise(LSP_EventType type, yyjson_doc* doc) {
+    switch (type) {
         case LSP_EVENT_TYPE_INIT:
             break;
         case LSP_EVENT_TYPE_OPEN:
@@ -69,8 +70,8 @@ static void lsp_send(LSP_EventType type, yyjson_mut_doc* doc) {
     yyjson_mut_val* root   = yyjson_mut_doc_get_root(doc);
     yyjson_mut_val* id_obj = yyjson_mut_obj_get(root, "id");
     if (yyjson_mut_is_int(id_obj)) {
-        int id         = yyjson_mut_get_int(id_obj);
-        event_type[id] = type;
+        int id = yyjson_mut_get_int(id_obj);
+        atomic_store(&event_type[id], type);
     }
 
     size_t len = 0;
@@ -101,15 +102,9 @@ static char* lsp_recv(void) {
             yyjson_val* root = yyjson_doc_get_root(doc);
             yyjson_val* id   = yyjson_obj_get(root, "id");
             if (yyjson_is_int(id)) {
-                int i = yyjson_get_int(id);
-                lsp_deserialise(i, doc);
-            }
-
-            size_t len = 0;
-            char* json = yyjson_write(doc, YYJSON_WRITE_PRETTY, &len);
-            if (json) {
-                printf("%s\n", json);
-                free(json);
+                int i    = yyjson_get_int(id);
+                int type = atomic_load(&event_type[i]);
+                lsp_deserialise(type, doc);
             }
 
             yyjson_doc_free(doc);
