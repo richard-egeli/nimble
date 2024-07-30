@@ -41,6 +41,7 @@ endif()
 
 add_subdirectory(lib/lsp)
 add_subdirectory(lib/text)
+add_subdirectory(lib/hashmap)
 add_executable(${PROJECT_NAME} main.c)
 
 target_sources(${PROJECT_NAME} PRIVATE
@@ -55,7 +56,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include lib)
-target_link_libraries(${PROJECT_NAME} raylib lsp text)
+target_link_libraries(${PROJECT_NAME} raylib lsp text hashmap)
 
 if (${BUILD_UNIT_TESTS})
     enable_testing()

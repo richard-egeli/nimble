@@ -43,3 +43,4 @@ endfunction()
 
 test(test_string SOURCES test_string.c LIBRARIES text)
 test(test_string_array SOURCES test_string_array.c LIBRARIES text)
+test(test_hashmap SOURCES test_hashmap.c LIBRARIES hashmap)
