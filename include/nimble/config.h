@@ -1,5 +1,5 @@
-#ifndef INCLUDE_NIMBLE_SETTINGS_H_
-#define INCLUDE_NIMBLE_SETTINGS_H_
+#ifndef INCLUDE_NIMBLE_CONFIG_H_
+#define INCLUDE_NIMBLE_CONFIG_H_
 
 #include <stddef.h>
 
@@ -29,4 +29,4 @@ const void* config_get(ConfigType type);
 
 void config_init(void);
 
-#endif  // INCLUDE_NIMBLE_SETTINGS_H_
+#endif  // INCLUDE_NIMBLE_CONFIG_H_

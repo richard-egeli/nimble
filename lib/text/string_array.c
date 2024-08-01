@@ -97,6 +97,11 @@ size_t string_array_length(const StringArray* arr) {
 }
 
 void string_array_free(StringArray* arr) {
+    for (int i = 0; i < arr->length; i++) {
+        String* str = string_array_at(arr, i);
+        free(str);
+    }
+
     free(arr->strings);
     free(arr);
 }

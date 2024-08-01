@@ -43,7 +43,6 @@ static void lsp_deserialise_hover(yyjson_doc* doc) {
             return;
         }
 
-        printf("DESERIALISE: %s \n%s\n", k, v);
         event->type             = LSP_EVENT_TYPE_HOVER;
         event->data.hover.kind  = strdup(k);
         event->data.hover.value = strdup(v);

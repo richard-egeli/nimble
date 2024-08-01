@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nimble/settings.h"
+#include "nimble/config.h"
 #include "raylib.h"
 #include "text/string.h"
 #include "text/string_array.h"

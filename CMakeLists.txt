@@ -20,6 +20,20 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 endif()
 
+# find_package(PkgConfig REQUIRED)
+# pkg_search_module(GLFW REQUIRED glfw3)
+find_package(glfw3 REQUIRED)
+if (NOT glfw3_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        glfw3
+        DOWNLOAD_EXTRACT_TIMESTAMP OFF
+        URL https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz
+    )
+
+    FetchContent_MakeAvailable(glfw3)
+endif()
+
 find_package(raylib QUIET)
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib
     include(FetchContent)
@@ -50,13 +64,15 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/editor.c
     src/insert.c
     src/buffer.c
-    src/settings.c
+    src/config.c
     src/motions.c
     src/finder.c
+    src/action.c
+    src/ini.c
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC include lib)
-target_link_libraries(${PROJECT_NAME} raylib lsp text hashmap)
+target_include_directories(${PROJECT_NAME} PUBLIC include lib ${GLFW_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} raylib lsp text hashmap ${GLFW_LIBRARIES})
 
 if (${BUILD_UNIT_TESTS})
     enable_testing()

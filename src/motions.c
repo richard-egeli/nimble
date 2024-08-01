@@ -6,19 +6,21 @@
 #include <string.h>
 
 #include "nimble/buffer.h"
+#include "nimble/editor.h"
 #include "nimble/text.h"
 #include "text/string.h"
 
 static const char* TEXT_DELIMITERS = "*!#()<>{}[].,/\";'";
 
-void motion_move_word_next(Buffer* buffer) {
+void motion_move_word_next(Editor* editor, void* args) {
+    Buffer* buffer       = editor->buffers[editor->buffer_index];
     size_t line          = buffer->text->line;
     size_t offset        = buffer->text->offset;
     const String* string = string_array_at(buffer->text->lines, line);
     const char* base     = string_iter(string);
     const char* ptr      = &base[offset];
 
-    if (offset >= string_length(string) - 1) {
+    if (offset + 1 >= string_length(string)) {
         line += 1;
         offset = 0;
         string = string_array_at(buffer->text->lines, line);
@@ -37,7 +39,8 @@ void motion_move_word_next(Buffer* buffer) {
     buffer->text->line   = line;
 }
 
-void motion_move_word_prev(Buffer* buffer) {
+void motion_move_word_prev(Editor* editor, void* args) {
+    Buffer* buffer       = editor->buffers[editor->buffer_index];
     size_t line          = buffer->text->line;
     size_t offset        = buffer->text->offset;
     const String* string = string_array_at(buffer->text->lines, line);
@@ -67,7 +70,8 @@ void motion_move_word_prev(Buffer* buffer) {
     buffer->text->offset = fmax(ptr - base, 0);
 }
 
-void motion_move_word_end(Buffer* buffer) {
+void motion_move_word_end(Editor* editor, void* args) {
+    Buffer* buffer       = editor->buffers[editor->buffer_index];
     size_t line          = buffer->text->line;
     size_t offset        = buffer->text->offset;
     const String* string = string_array_at(buffer->text->lines, line);
@@ -75,7 +79,7 @@ void motion_move_word_end(Buffer* buffer) {
     const char* ptr      = &base[offset + 1];
 
     if (*ptr && ptr[1] && strchr(TEXT_DELIMITERS, ptr[1])) ptr++;
-    if (offset >= string_length(string) - 1) {
+    if (offset + 1 >= string_length(string)) {
         offset = 0;
         line += 1;
 

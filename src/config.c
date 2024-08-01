@@ -1,4 +1,4 @@
-#include "nimble/settings.h"
+#include "nimble/config.h"
 
 #include <math.h>
 #include <stdio.h>

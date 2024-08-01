@@ -1,8 +1,8 @@
 #include "nimble/editor.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
-#include <math.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,18 +10,48 @@
 #include <unistd.h>
 
 #include "lsp/lsp.h"
+#include "nimble/action.h"
 #include "nimble/buffer.h"
+#include "nimble/config.h"
+#include "nimble/ini.h"
 #include "nimble/insert.h"
 #include "nimble/normal.h"
-#include "nimble/settings.h"
 #include "nimble/text.h"
-#include "text/string_array.h"
 
 static const char* const MODE_NAME[] = {
     [MODE_NORMAL] = "NORMAL",
     [MODE_INSERT] = "INSERT",
     [MODE_VISUAL] = "VISUAL",
 };
+
+static void editor_draw_text_cursor(const Editor* editor) {
+    Buffer* buffer = editor->buffers[editor->buffer_index];
+    Rectangle c    = text_cursor_get(buffer->text);
+    DrawRectangle(c.x, c.y, c.width, c.height, BLUE);
+}
+
+static void editor_draw_status_bar(const Editor* editor) {
+    int width             = GetScreenWidth();
+    int height            = GetScreenHeight();
+    const Buffer* buffer  = editor->buffers[editor->buffer_index];
+    const TextConfig* cfg = config_get(CONFIG_TEXT);
+
+    Rectangle rect   = {.x = 0, .y = height - 16, .width = width, .height = 16};
+    Vector2 position = {.x = 12, .y = height - 20};
+
+    char status[32];
+    size_t line   = buffer->text->line;
+    size_t offset = buffer->text->offset;
+    snprintf(status, sizeof(status), "%zu:%zu", line, offset);
+
+    const char* mode = MODE_NAME[editor->mode];
+    DrawRectangle(0, height - 24, width, 24, DARKBROWN);
+    DrawTextEx(cfg->font, mode, position, 16, cfg->char_spacing, WHITE);
+
+    Vector2 size = MeasureTextEx(cfg->font, status, 16, cfg->char_spacing);
+    position.x   = width - size.x - 16;
+    DrawTextEx(cfg->font, status, position, 16, cfg->char_spacing, WHITE);
+}
 
 char* editor_file_search(Editor* editor, const char* filter) {
     FILE* fp;
@@ -79,6 +109,24 @@ void editor_refresh(const Editor* editor) {
 
 void editor_hover_preview(Editor* editor, const char* text) {
     // FBO / RenderTexture are not working as expected in Raylib so has to wait
+    printf("%s\n", text);
+}
+
+static const char* get_modifier(void) {
+    static char buffer[64];
+    const char* shift = IsKeyDown(KEY_LEFT_SHIFT) ? "shift" : NULL;
+    const char* ctrl  = IsKeyDown(KEY_LEFT_CONTROL) ? "ctrl" : NULL;
+    if (shift && ctrl) {
+        snprintf(buffer, sizeof(buffer), "<%s-%s>", ctrl, shift);
+    } else if (ctrl) {
+        snprintf(buffer, sizeof(buffer), "<%s>", ctrl);
+    } else if (shift) {
+        snprintf(buffer, sizeof(buffer), "<%s>", shift);
+    } else {
+        buffer[0] = '\0';
+    }
+
+    return buffer;
 }
 
 void editor_update(Editor* editor) {
@@ -86,60 +134,33 @@ void editor_update(Editor* editor) {
     assert(editor->buffers != NULL);
     assert(editor->buffers[editor->buffer_index] != NULL);
 
-    ModeVTable* vtable = editor->mode_vtable[editor->mode];
-    assert(vtable != NULL);
-    assert(vtable->update != NULL);
-    vtable->update(vtable, editor->buffers[editor->buffer_index]);
+    Section* keymap = ini_section_get(editor->settings, "keymap.normal");
+    int c;
+
+    const char* modifier = get_modifier();
+    while ((c = GetKeyPressed())) {
+        char buffer[64];
+        if (c < 256) {
+            snprintf(buffer, sizeof(buffer), "%s%c", modifier, tolower(c));
+            const char* str = ini_property_get_str(keymap, buffer);
+            printf("%s\n", buffer);
+            if (str != NULL) {
+                action_call(editor, str, NULL);
+            }
+        }
+    }
+
+    // ModeVTable* vtable = editor->mode_vtable[editor->mode];
+    // assert(vtable != NULL);
+    // assert(vtable->update != NULL);
+    // vtable->update(vtable, editor->buffers[editor->buffer_index]);
 }
 
-void editor_scroll(Editor* editor, int x, int y) {
-    assert(editor != NULL);
-    assert(editor->buffers != NULL);
-    assert(editor->buffer_length > 0);
-    Buffer* buffer        = editor->buffers[editor->buffer_index];
-
-    const TextConfig* cfg = config_get(CONFIG_TEXT);
-    assert(buffer != NULL);
-
-    int padding      = 40;
-    int spacing      = cfg->font.baseSize + cfg->line_spacing;
-    int line_count   = string_array_length(buffer->text->lines);
-    int max          = line_count * spacing - GetScreenHeight() + padding;
-    buffer->scroll.y = fmax(fmin(0, buffer->scroll.y + y), -max);
-}
-
-void editor_draw_status_bar(const Editor* editor) {
-    int width             = GetScreenWidth();
-    int height            = GetScreenHeight();
-    const Buffer* buffer  = editor->buffers[editor->buffer_index];
-    const TextConfig* cfg = config_get(CONFIG_TEXT);
-
-    Rectangle rect   = {.x = 0, .y = height - 16, .width = width, .height = 16};
-    Vector2 position = {.x = 12, .y = height - 20};
-
-    char status[32];
-    size_t line   = buffer->text->line;
-    size_t offset = buffer->text->offset;
-    snprintf(status, sizeof(status), "%zu:%zu", line, offset);
-
-    const char* mode = MODE_NAME[editor->mode];
-    DrawRectangle(0, height - 24, width, 24, DARKBROWN);
-    DrawTextEx(cfg->font, mode, position, 16, cfg->char_spacing, WHITE);
-
-    Vector2 size = MeasureTextEx(cfg->font, status, 16, cfg->char_spacing);
-    position.x   = width - size.x - 16;
-    DrawTextEx(cfg->font, status, position, 16, cfg->char_spacing, WHITE);
-}
-
-void editor_draw_text_cursor(const Editor* editor) {
-    Buffer* buffer = editor->buffers[editor->buffer_index];
-    Rectangle c    = text_cursor_get(buffer->text);
-    DrawRectangle(c.x, c.y, c.width, c.height, BLUE);
-}
-
-void editor_draw_text(const Editor* editor) {
+void editor_draw(const Editor* editor) {
     const Buffer* buffer = editor->buffers[editor->buffer_index];
-    text_draw(buffer->text, 0, buffer->scroll.y);
+    editor_draw_text_cursor(editor);
+    text_draw(buffer->text, 0, 0);
+    editor_draw_status_bar(editor);
 }
 
 int editor_open_file(Editor* editor, const char* relative_path) {

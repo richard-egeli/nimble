@@ -8,11 +8,13 @@ typedef struct HashMap HashMap;
 
 size_t hmap_capacity(const HashMap* this);
 
+bool hmap_has(const HashMap* this, const char* key);
+
 bool hmap_put(HashMap* this, const char* key, void* value);
 
 bool hmap_take(HashMap* this, const char* key, void** value);
 
-bool hmap_get(const HashMap* this, const char* key, void const** value);
+bool hmap_get(const HashMap* this, const char* key, void** value);
 
 void hmap_free(HashMap* this);
 

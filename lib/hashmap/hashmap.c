@@ -1,11 +1,11 @@
 #include "hashmap.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/_types/_key_t.h>
 
 #define HASHMAP_DEFAULT_CAPACITY 31
 #define HASHMAP_MAX_LOAD_FACTOR  0.75
@@ -80,9 +80,9 @@ static uint32_t hmap_hash(const char* str) {
     return h;
 }
 
-static inline bool hmap_has(const HashMap* map,
-                            const char* key,
-                            uint32_t hash) {
+static inline bool hmap_exists(const HashMap* map,
+                               const char* key,
+                               uint32_t hash) {
     uint32_t index = hash % map->capacity;
     KeyValue* p    = map->list[index];
     while (p != NULL) {
@@ -177,18 +177,29 @@ size_t hmap_capacity(const HashMap* this) {
     return this->capacity;
 }
 
+bool hmap_has(const HashMap* this, const char* key) {
+    return hmap_exists(this, key, hmap_hash(key));
+}
+
 bool hmap_put(HashMap* this, const char* key, void* value) {
     uint32_t hash = hmap_hash(key);
 
-    if (!hmap_has(this, key, hash)) {
+    if (!hmap_exists(this, key, hash)) {
         KeyValue* p = malloc(sizeof(*p));
         if (p == NULL) {
             perror("failed to allocate key/value to put element into hashmap");
             return false;
         }
 
+        char* key_copy = strdup(key);
+        if (key_copy == NULL) {
+            perror("failed to copy key to new heap allocation");
+            free(p);
+            return false;
+        }
+
         int index         = hash % this->capacity;
-        p->key            = strdup(key);
+        p->key            = key_copy;
         p->value          = value;
         p->hash           = hash;
         p->next           = this->list[index];
@@ -228,7 +239,7 @@ bool hmap_take(HashMap* this, const char* str, void** value) {
     return false;
 }
 
-bool hmap_get(const HashMap* this, const char* str, void const** value) {
+bool hmap_get(const HashMap* this, const char* str, void** value) {
     const uint32_t hash = hmap_hash(str) % this->capacity;
     const KeyValue* v   = this->list[hash];
 
@@ -241,7 +252,6 @@ bool hmap_get(const HashMap* this, const char* str, void const** value) {
         v = v->next;
     }
 
-    *value = NULL;
     return false;
 }
 

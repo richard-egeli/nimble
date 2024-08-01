@@ -3,22 +3,27 @@
 
 typedef struct Buffer Buffer;
 
-typedef enum {
+typedef struct Settings Settings;
+
+typedef struct Editor Editor;
+
+typedef enum Mode {
     MODE_NORMAL,
     MODE_INSERT,
     MODE_VISUAL,
     MODE_MAX,
 } Mode;
 
-typedef struct {
+typedef struct ModeVTable {
     void (*on_enter)(void* mode);
     void (*on_exit)(void* mode);
-    void (*update)(void* vtable, Buffer* buffer);
+    void (*update)(Editor* editor);
 } ModeVTable;
 
-typedef struct {
+typedef struct Editor {
     Mode mode;
     ModeVTable* mode_vtable[MODE_MAX];
+    Settings* settings;
     Buffer** buffers;
     int buffer_length;
     int buffer_index;
@@ -36,15 +41,7 @@ void editor_update(Editor* editor);
 
 void editor_refresh(const Editor* editor);
 
-void editor_scroll(Editor* editor, int x, int y);
-
-void editor_draw_text_cursor(const Editor* editor);
-
-void editor_draw_text(const Editor* editor);
-
 void editor_draw(const Editor* editor);
-
-void editor_draw_status_bar(const Editor* editor);
 
 Editor* editor_create(void);
 

@@ -6,7 +6,6 @@
 typedef struct Buffer {
     const char* filepath;
     Text* text;
-    Vector2 scroll;
 } Buffer;
 
 void buffer_move_up(Buffer* buffer);
